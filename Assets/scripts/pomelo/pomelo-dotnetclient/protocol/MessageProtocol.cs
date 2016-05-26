@@ -3,6 +3,8 @@ using System.Text;
 using System.Collections.Generic;
 using LitJson;
 using Pomelo.Protobuf;
+using UnityEngine;
+
 namespace Pomelo.DotNetClient
 {
     public class MessageProtocol
@@ -134,6 +136,13 @@ namespace Pomelo.DotNetClient
                 //Get route
 				if((flag & 0x01) == 1){
                     ushort routeId = readShort(offset, buffer);
+                    if(!abbrs.ContainsKey(routeId))
+                    {
+                        offset += 2;
+                        Debug.LogError("error route id " + routeId);
+                        return null;
+                        //throw new System.Exception("error router id " + routeId);
+                    }
                     route = abbrs[routeId];
 
                     offset += 2;

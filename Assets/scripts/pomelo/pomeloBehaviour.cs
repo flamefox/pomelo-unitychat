@@ -56,6 +56,14 @@ public class pomeloBehaviour : MonoBehaviour
         }
     }
 
+    public string GetHandShakeCache()
+    {
+        if(pc != null)
+        {
+            return pc.GetHandShakeCache();
+        }
+        return "";
+    }
 
     //TODO TLS "C7773B9D1BF0C5C956C88C60440FA23C3889A403"
     public bool ConnectServer(string host, int port,
@@ -74,29 +82,29 @@ public class pomeloBehaviour : MonoBehaviour
         //TODO should not disconnect at some time
         this.CloseClient();
         pc = new PomeloClient(eProtoType);
-        pc.HandShakeCache = HandShakeCache;
-        pc.initClient(host, port, delegate ()
+        pc.initClient(host, port, HandShakeCache, delegate ()
         {
             if (pc.IsConnected)
             {
                 this.UpdateClient();
                 pc.connect(null, delegate (JsonData data)
                 {
-                    if (connectEvent != null)
+                    if (this.connectEvent != null)
                     {
-                        connectEvent();
+                        this.connectEvent();
                     }
                 });
             }
-            else
+           
+        },
+        delegate ()
+        {
+            if (this.closeEvent != null)
             {
-                if (closeEvent != null)
-                {
-                    closeEvent();
-                }
+                this.closeEvent();
             }
-        }
-        , clientcert, "", cathumbprint
+
+        }, clientcert, "", cathumbprint
         );
 
         return true;
@@ -105,9 +113,9 @@ public class pomeloBehaviour : MonoBehaviour
 
     private void UpdateClient()
     {
-        if (updateClientEvent != null)
+        if (this.updateClientEvent != null)
         {
-            updateClientEvent();
+            this.updateClientEvent();
         }
     }
 

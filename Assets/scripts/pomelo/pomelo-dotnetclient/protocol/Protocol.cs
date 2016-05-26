@@ -14,8 +14,10 @@ namespace Pomelo.DotNetClient
         private HandShakeService handshake;
         private HeartBeatService heartBeatService = null;
         private PomeloClient pc;
+        public string HandShakeCache{ get; set; }
 
-		public PomeloClient getPomeloClient(){
+
+        public PomeloClient getPomeloClient(){
             return this.pc;
         }
 
@@ -138,14 +140,20 @@ namespace Pomelo.DotNetClient
             }
         }
 
-        public void InitProtoCache(JsonData sys)
+        public void InitProtoCache(string data)
+        {
+            JsonData handshake = JsonMapper.ToObject(data);
+            this.InitProtoCache(handshake);
+        }
+
+        private void InitProtoCache(JsonData sys)
         {
             JsonData dict = new JsonData();
             JsonData routeToCode = new JsonData();
             JsonData codeToRoute = new JsonData();
             if (sys.ContainsKey("dict")) dict = (JsonData)sys["dict"];
-            if (sys.ContainsKey("routeToCode")) routeToCode = (JsonData)sys["routeToCode"];
-            if (sys.ContainsKey("codeToRoute")) codeToRoute = (JsonData)sys["codeToRoute"];
+            //if (sys.ContainsKey("routeToCode")) routeToCode = (JsonData)sys["routeToCode"];
+            //if (sys.ContainsKey("codeToRoute")) codeToRoute = (JsonData)sys["codeToRoute"];
 
 
             string dictVersion = "";
@@ -167,33 +175,53 @@ namespace Pomelo.DotNetClient
 
             if(messageProtocol != null)
             {
-                if((dictVersion != "" && messageProtocol.dictVersion != dictVersion)
+                if ((dictVersion != "" && messageProtocol.dictVersion != dictVersion)
                     || (protoVersion != "" && messageProtocol.protoVersion != protoVersion))
                 {
+                    //update cache 
+                    JsonData sysNew = JsonMapper.ToObject(this.HandShakeCache);
+                    if(sys.ContainsKey("dict"))
+                    {
+                        sysNew["dict"] = new JsonData();
+                        sysNew["dict"] = sys["dict"];
+                    }
+                    if (sys.ContainsKey("dictVersion"))
+                    {
+                        sysNew["dictVersion"] = sys["dictVersion"];
+                    }
+                    if (sys.ContainsKey("protos"))
+                    {
+                        sysNew["protos"] = new JsonData();
+                        sysNew["protos"] = sys["protos"];
+                    }
+                    this.HandShakeCache = sysNew.ToJson();
+                    this.messageProtocol = null;
+                    this.InitProtoCache(this.HandShakeCache);
                     
-                    MessageProtocol messageProtocolNew = new MessageProtocol(dict, serverProtos, clientProtos, dictVersion, protoVersion);
+                    //MessageProtocol messageProtocolNew = new MessageProtocol(dict, serverProtos, clientProtos, dictVersion, protoVersion);
 
-                    if (dictVersion == "" && !sys.ContainsKey("dict"))
-                    {
-                        messageProtocolNew.dict = messageProtocol.dict;
-                        messageProtocolNew.abbrs = messageProtocol.abbrs;
-                        messageProtocolNew.dictVersion = messageProtocol.dictVersion;
-                    }
+                    //if (dictVersion == "" && !sys.ContainsKey("dict"))
+                    //{
+                    //    messageProtocolNew.dict = messageProtocol.dict;
+                    //    messageProtocolNew.abbrs = messageProtocol.abbrs;
+                    //    messageProtocolNew.dictVersion = messageProtocol.dictVersion;
+                    //}
 
-                    if(protoVersion == "" && !sys.ContainsKey("protos"))
-                    {
-                        messageProtocolNew.encodeProtos = messageProtocol.encodeProtos;
-                        messageProtocolNew.decodeProtos = messageProtocol.decodeProtos;
+                    //if(protoVersion == "" && !sys.ContainsKey("protos"))
+                    //{
+                    //    messageProtocolNew.encodeProtos = messageProtocol.encodeProtos;
+                    //    messageProtocolNew.decodeProtos = messageProtocol.decodeProtos;
 
-                        messageProtocolNew.protoVersion = messageProtocol.protoVersion;
-                    }
+                    //    messageProtocolNew.protoVersion = messageProtocol.protoVersion;
+                    //}
 
-                    messageProtocol = messageProtocolNew;
+                    //messageProtocol = messageProtocolNew;
                 }
             }
             else
             {
                 messageProtocol = new MessageProtocol(dict, serverProtos, clientProtos, dictVersion, protoVersion);
+                this.HandShakeCache = sys.ToJson();
             }           
 
         }
@@ -222,14 +250,14 @@ namespace Pomelo.DotNetClient
             }
 
             this.InitProtoCache(sys);
-
+            
             //send ack and change protocol state
             handshake.ack();
             this.state = ProtocolState.working;
 
             //Invoke handshake callback
 			JsonData user = new JsonData();
-			if(msg.ContainsKey("user")) user = (JsonData)msg["user"];
+            if(msg.ContainsKey("user")) user = (JsonData)msg["user"];
             handshake.invokeCallback(user);
         }
 

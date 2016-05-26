@@ -48,7 +48,7 @@ namespace Pomelo.DotNetClient
             sys["type"] = Type;
             sys["dictVersion"] = protocol.getDictVersion();
             sys["protoVersion"] = protocol.getProtoVersion();
-            sys["handshakeVersion"] = protocol.HandShakeVersion;
+            //sys["handshakeVersion"] = protocol.HandShakeVersion;
 
             //Build handshake message
             msg["sys"] = sys;

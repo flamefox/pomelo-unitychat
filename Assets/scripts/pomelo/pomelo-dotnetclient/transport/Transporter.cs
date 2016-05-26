@@ -55,25 +55,55 @@ namespace Pomelo.DotNetClient
                 //    str += code.ToString();
                 //}
                 //Console.WriteLine("send:" + buffer.Length + " " + str.Length + "  " + str);
-                this.asyncSend = socket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(sendCallback), socket);
+                try
+                {
+                    this.asyncSend = socket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(sendCallback), socket);
+                    this.onSending = true;
+                }
+                catch (Exception e)
+                {
 
-                this.onSending = true;
+                    Debug.Log(e);
+                }
+                
             }
         }
 
         private void sendCallback(IAsyncResult asyncSend)
         {
             //UnityEngine.Debug.Log("sendCallback " + this.transportState);
-            if (this.transportState == TransportState.closed) return;
-            socket.EndSend(asyncSend);
+            try
+            {
+                socket.EndSend(asyncSend);
+            }
+            catch (Exception e)
+            {
+                Debug.Log(e);
+            }
+
             this.onSending = false;
+            //if (this.transportState == TransportState.closed) return;
+            
+            
         }
 
         public void receive()
         {
             //Console.WriteLine("receive state : {0}, {1}", this.transportState, socket.Available);
-            this.asyncReceive = socket.BeginReceive(stateObject.buffer, 0, stateObject.buffer.Length, SocketFlags.None, new AsyncCallback(endReceive), stateObject);
-            this.onReceiving = true;
+            try
+            {
+                this.asyncReceive = socket.BeginReceive(stateObject.buffer, 0, stateObject.buffer.Length, SocketFlags.None, new AsyncCallback(endReceive), stateObject);
+                this.onReceiving = true;
+            }
+            catch (Exception e)
+            {
+
+                Debug.Log(e);
+                if (this.onDisconnect != null)
+                    this.onDisconnect();
+                this.close();
+            }
+
         }
 
         public void close()
@@ -89,8 +119,6 @@ namespace Pomelo.DotNetClient
 
         private void endReceive(IAsyncResult asyncReceive)
         {
-            if (this.transportState == TransportState.closed)
-                return;
             StateObject state = (StateObject)asyncReceive.AsyncState;
             Socket socket = this.socket;
 
@@ -109,13 +137,16 @@ namespace Pomelo.DotNetClient
                 else
                 {
                     if (this.onDisconnect != null) this.onDisconnect();
+                    this.close();
                 }
 
             }
-            catch (System.Net.Sockets.SocketException)
+            catch (System.Net.Sockets.SocketException e)
             {
+                Debug.Log(e);
                 if (this.onDisconnect != null)
                     this.onDisconnect();
+                this.close();
             }
         }
 

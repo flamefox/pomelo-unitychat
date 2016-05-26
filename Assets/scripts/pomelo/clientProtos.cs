@@ -3,6 +3,16 @@ using LitJson;
 using Pomelo.DotNetClient;
 namespace Proto
 {
+    public static class Version
+    {
+        public static void resetClient(PomeloClient pc)
+        {
+            gate.gateHandler.pc = pc;
+            connector.entryHandler.pc = pc;
+            chat.chatHandler.pc = pc;
+            ServerEvent.pc = pc;
+        }
+    }
     namespace chat
     {
         public class chatHandler

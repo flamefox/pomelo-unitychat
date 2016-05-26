@@ -97,7 +97,7 @@ GameObject:
   - 114: {fileID: 77625751}
   - 114: {fileID: 77625750}
   m_Layer: 5
-  m_Name: Button
+  m_Name: Send
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -936,7 +936,18 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1801203195}
+      - m_Target: {fileID: 1801203196}
+        m_MethodName: ConnectToGate
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 1
+        m_CallState: 2
+      - m_Target: {fileID: 1743597617}
         m_MethodName: SetActive
         m_Mode: 6
         m_Arguments:
@@ -945,7 +956,7 @@ MonoBehaviour:
           m_IntArgument: 0
           m_FloatArgument: 0
           m_StringArgument: 
-          m_BoolArgument: 1
+          m_BoolArgument: 0
         m_CallState: 2
     m_TypeName: UnityEngine.UI.Button+ButtonClickedEvent, UnityEngine.UI, Version=1.0.0.0,
       Culture=neutral, PublicKeyToken=null
@@ -1013,6 +1024,8 @@ MonoBehaviour:
   HandShakeCache: '{"dict":{"chat.chatHandler.send":1,"connector.entryHandler.enter":2,"gate.gateHandler.queryEntry":3,"onChat":4,"onAdd":5,"onLeave":6},"routeToCode":{"chat.chatHandler.send":1,"connector.entryHandler.enter":2,"gate.gateHandler.queryEntry":3,"onChat":4,"onAdd":5,"onLeave":6},"codeToRoute":{"1":"chat.chatHandler.send","2":"connector.entryHandler.enter","3":"gate.gateHandler.queryEntry","4":"onChat","5":"onAdd","6":"onLeave"},"dictVersion":"2aLbouXtKQ/URxNfQ1DeAg==","useDict":true,"protos":{"server":{"onChat":{"msg":{"option":"required","type":"string","tag":1},"from":{"option":"required","type":"string","tag":2},"target":{"option":"required","type":"string","tag":3},"__messages":{},"__tags":{"1":"msg","2":"from","3":"target"}},"onLeave":{"user":{"option":"required","type":"string","tag":1},"__messages":{},"__tags":{"1":"user"}},"onAdd":{"user":{"option":"required","type":"string","tag":1},"__messages":{},"__tags":{"1":"user"}},"gate.gateHandler.queryEntry":{"code":{"option":"required","type":"int32","tag":1},"host":{"option":"required","type":"string","tag":2},"port":{"option":"required","type":"int32","tag":3},"__messages":{},"__tags":{"1":"code","2":"host","3":"port"}},"connector.entryHandler.enter":{"users":{"option":"repeated","type":"string","tag":1},"__messages":{},"__tags":{"1":"users"}}},"client":{"chat.chatHandler.send":{"rid":{"option":"required","type":"string","tag":1},"content":{"option":"required","type":"string","tag":2},"from":{"option":"required","type":"string","tag":3},"target":{"option":"required","type":"string","tag":4},"__messages":{},"__tags":{"1":"rid","2":"content","3":"from","4":"target"}},"connector.entryHandler.enter":{"username":{"option":"required","type":"string","tag":1},"rid":{"option":"required","type":"string","tag":2},"__messages":{},"__tags":{"1":"username","2":"rid"}},"gate.gateHandler.queryEntry":{"uid":{"option":"required","type":"string","tag":1},"__messages":{},"__tags":{"1":"uid"}}},"version":"Lm3Gb2Bj3ajzdlXAGKLW0Q=="},"useProto":true}'
   text: {fileID: 757331352}
   input: {fileID: 717768068}
+  loginBtn: {fileID: 1743597619}
+  sendBtn: {fileID: 77625750}
   host: 127.0.0.1
   port: 3014
 --- !u!4 &1801203197
@@ -1177,7 +1190,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Button
+  m_Text: Send
 --- !u!222 &1952633825
 CanvasRenderer:
   m_ObjectHideFlags: 0
