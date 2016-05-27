@@ -374,9 +374,20 @@ namespace Pomelo.DotNetClient
 
             lock(guard)
             {
+                if(Thread.CurrentThread.ManagedThreadId == 1)
+                {
                 if (disconnCallBack != null)
                 {
-                    callBackQueue.Add(disconnCallBack);
+                        disconnCallBack();
+                        this.Dispose(true);
+                    }
+                }
+                else
+                {
+                    if (disconnCallBack != null)
+                    {
+                        bDisconnCallBack = true;
+                    }
                 }
             }
 
@@ -386,7 +397,6 @@ namespace Pomelo.DotNetClient
 
         public void Dispose()
         {
-            // TODO 会在多个线程运行
             Dispose(true);
             GC.SuppressFinalize(this);
         }

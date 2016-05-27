@@ -31,7 +31,7 @@ public class chatofpomelo : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        //if (sendBtn) { sendBtn.interactable = true; }
+        if (sendBtn) { sendBtn.interactable = true; }
         ConnectToGate();
     }
 
@@ -115,7 +115,7 @@ public class chatofpomelo : MonoBehaviour
 
         entryHandler.enter(user, "pomelo", delegate (entryHandler.enter_result result)
         {
-            //if (sendBtn) { sendBtn.interactable = true; }
+            if (sendBtn) { sendBtn.interactable = true; }
         });
     }
 
@@ -130,7 +130,7 @@ public class chatofpomelo : MonoBehaviour
         client.closeEvent -= OnServerDisconnect;
 
         if (loginBtn) { loginBtn.gameObject.SetActive(true); }
-        //if (sendBtn) { loginBtn.interactable = false; }
+        if (sendBtn) { sendBtn.interactable = false; }
 
     }
 
@@ -140,7 +140,7 @@ public class chatofpomelo : MonoBehaviour
         client.closeEvent -= OnGateServerDisconnect;
 
         if (loginBtn) { loginBtn.gameObject.SetActive(true); }
-        //if (sendBtn) { sendBtn.interactable = false; }
+        if (sendBtn) { sendBtn.interactable = false; }
 
     }
 }
