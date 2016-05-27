@@ -6,18 +6,4 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 0
-    path: Assets/test.unity
-  - enabled: 0
-    path: Assets/login.unity
-  - enabled: 0
-    path: Assets/chat.unity
-  - enabled: 0
-    path: Assets/login.unity
-  - enabled: 0
-    path: Assets/login.unity
-  - enabled: 0
-    path: Assets/scenes/login.unity
-  - enabled: 0
     path: Assets/scenes/chat.unity
-  - enabled: 0
-    path: Assets/scenes/solo.unity

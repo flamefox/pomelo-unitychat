@@ -57,6 +57,7 @@ namespace Pomelo.DotNetClient
                 //Console.WriteLine("send:" + buffer.Length + " " + str.Length + "  " + str);
                 try
                 {
+
                     this.asyncSend = socket.BeginSend(buffer, 0, buffer.Length, SocketFlags.None, new AsyncCallback(sendCallback), socket);
                     this.onSending = true;
                 }
@@ -64,6 +65,9 @@ namespace Pomelo.DotNetClient
                 {
 
                     Debug.Log(e);
+                    if (this.onDisconnect != null)
+                        this.onDisconnect();
+                    this.close();
                 }
                 
             }
@@ -124,6 +128,7 @@ namespace Pomelo.DotNetClient
 
             try
             {
+
                 int length = socket.EndReceive(asyncReceive);
 
                 this.onReceiving = false;
@@ -141,7 +146,7 @@ namespace Pomelo.DotNetClient
                 }
 
             }
-            catch (System.Net.Sockets.SocketException e)
+            catch (SocketException e)
             {
                 Debug.Log(e);
                 if (this.onDisconnect != null)

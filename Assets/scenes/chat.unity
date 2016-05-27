@@ -160,7 +160,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1801203196}
+      - m_Target: {fileID: 1801203199}
         m_MethodName: send
         m_Mode: 1
         m_Arguments:
@@ -1003,6 +1003,7 @@ GameObject:
   - 4: {fileID: 1801203197}
   - 114: {fileID: 1801203198}
   - 114: {fileID: 1801203196}
+  - 114: {fileID: 1801203199}
   m_Layer: 0
   m_Name: pomelo_client
   m_TagString: Untagged
@@ -1022,12 +1023,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   HandShakeCache: '{"dict":{"chat.chatHandler.send":1,"connector.entryHandler.enter":2,"gate.gateHandler.queryEntry":3,"onChat":4,"onAdd":5,"onLeave":6},"routeToCode":{"chat.chatHandler.send":1,"connector.entryHandler.enter":2,"gate.gateHandler.queryEntry":3,"onChat":4,"onAdd":5,"onLeave":6},"codeToRoute":{"1":"chat.chatHandler.send","2":"connector.entryHandler.enter","3":"gate.gateHandler.queryEntry","4":"onChat","5":"onAdd","6":"onLeave"},"dictVersion":"2aLbouXtKQ/URxNfQ1DeAg==","useDict":true,"protos":{"server":{"onChat":{"msg":{"option":"required","type":"string","tag":1},"from":{"option":"required","type":"string","tag":2},"target":{"option":"required","type":"string","tag":3},"__messages":{},"__tags":{"1":"msg","2":"from","3":"target"}},"onLeave":{"user":{"option":"required","type":"string","tag":1},"__messages":{},"__tags":{"1":"user"}},"onAdd":{"user":{"option":"required","type":"string","tag":1},"__messages":{},"__tags":{"1":"user"}},"gate.gateHandler.queryEntry":{"code":{"option":"required","type":"int32","tag":1},"host":{"option":"required","type":"string","tag":2},"port":{"option":"required","type":"int32","tag":3},"__messages":{},"__tags":{"1":"code","2":"host","3":"port"}},"connector.entryHandler.enter":{"users":{"option":"repeated","type":"string","tag":1},"__messages":{},"__tags":{"1":"users"}}},"client":{"chat.chatHandler.send":{"rid":{"option":"required","type":"string","tag":1},"content":{"option":"required","type":"string","tag":2},"from":{"option":"required","type":"string","tag":3},"target":{"option":"required","type":"string","tag":4},"__messages":{},"__tags":{"1":"rid","2":"content","3":"from","4":"target"}},"connector.entryHandler.enter":{"username":{"option":"required","type":"string","tag":1},"rid":{"option":"required","type":"string","tag":2},"__messages":{},"__tags":{"1":"username","2":"rid"}},"gate.gateHandler.queryEntry":{"uid":{"option":"required","type":"string","tag":1},"__messages":{},"__tags":{"1":"uid"}}},"version":"Lm3Gb2Bj3ajzdlXAGKLW0Q=="},"useProto":true}'
-  text: {fileID: 757331352}
-  input: {fileID: 717768068}
-  loginBtn: {fileID: 1743597619}
-  sendBtn: {fileID: 77625750}
   host: 127.0.0.1
   port: 3014
+  uid: 1
 --- !u!4 &1801203197
 Transform:
   m_ObjectHideFlags: 0
@@ -1051,6 +1049,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a25f4e11c54f9834d9e3a8668fc3dd4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1801203199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1801203195}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5dd7fb9c0f72134486dff19aa4c5c48, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  text: {fileID: 757331352}
+  input: {fileID: 717768068}
+  loginBtn: {fileID: 1743597619}
+  sendBtn: {fileID: 77625750}
+  uid: 1
 --- !u!1 &1904275010
 GameObject:
   m_ObjectHideFlags: 0

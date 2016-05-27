@@ -9,19 +9,21 @@ using Proto.gate;
 [RequireComponent(typeof(pomeloBehaviour))]
 public class chatofpomelo : MonoBehaviour
 {
-    string user;
+
 
     [TextArea(3, 10)]
     public string HandShakeCache;
 
-    public UnityEngine.UI.Text text;
-    public UnityEngine.UI.InputField input;
-    public UnityEngine.UI.Button loginBtn;
-    public UnityEngine.UI.Button sendBtn;
-
     public string host = "127.0.0.1";
     public int port = 3014;
     pomeloBehaviour client;
+    public string uid = "1";
+
+
+    public Action connectToConnector;
+    public Action disconnectConnector;
+    public Action connectGateFailed;
+
     void Awake()
     {
 
@@ -29,11 +31,7 @@ public class chatofpomelo : MonoBehaviour
         client.updateClientEvent += OnUpdateClient;
     }
     // Use this for initialization
-    void Start()
-    {
-        if (sendBtn) { sendBtn.interactable = true; }
-        ConnectToGate();
-    }
+
 
     public void ConnectToGate()
     {
@@ -42,53 +40,25 @@ public class chatofpomelo : MonoBehaviour
         client.ConnectServer(host, port, Pomelo.DotNetClient.ClientProtocolType.NORMAL, HandShakeCache);
     }
 
-    public void send()
-    {
-        this.send(input.text);
-    }
-
-    public void send(string message)
-    {
-        chatHandler.send(
-            "pomelo",
-            message,
-            user,
-            "*"
-            );
-    }
-
     public void OnConnectToConnector()
     {
         client.closeEvent += OnServerDisconnect;
+        
 
         this.HandShakeCache = client.GetHandShakeCache();
-        ServerEvent.onChat(delegate (ServerEvent.onChat_event ret)
+
+        if(connectToConnector != null)
         {
-            string strMsg = string.Format("{0} : {1}.", ret.from, ret.msg);
-            if (text)
-            {
-                text.text = text.text.Insert(text.text.Length, strMsg);
-                text.text = text.text.Insert(text.text.Length, "\n");
-            }
-        });
+            connectToConnector.Invoke();
+        }
 
-        ServerEvent.onAdd(delegate (ServerEvent.onAdd_event msg)
-        {
-
-        });
-
-        ServerEvent.onLeave(delegate (ServerEvent.onLeave_event msg)
-        {
-
-        });
-
-
-        login();
+      
     }
     public void OnConnectToGate()
     {
         this.HandShakeCache = client.GetHandShakeCache();
-        gateHandler.queryEntry("1", delegate (gateHandler.queryEntry_result result)
+        //gate logic can moveto logicclient
+        gateHandler.queryEntry(uid, delegate (gateHandler.queryEntry_result result)
         {
             client.connectEvent -= OnConnectToGate;
             client.closeEvent -= OnGateServerDisconnect;
@@ -102,22 +72,14 @@ public class chatofpomelo : MonoBehaviour
 
             if (result.code == 200)
             {
-                client.connectEvent += OnConnectToConnector;  
+                client.connectEvent += OnConnectToConnector;
                 client.ConnectServer(result.host, result.port, Pomelo.DotNetClient.ClientProtocolType.NORMAL, HandShakeCache);
             }
-             
+
             //TODO other event
         });
     }
-    public void login()
-    {
-        user = "pomelo" + DateTime.Now.Millisecond;
 
-        entryHandler.enter(user, "pomelo", delegate (entryHandler.enter_result result)
-        {
-            if (sendBtn) { sendBtn.interactable = true; }
-        });
-    }
 
     private void OnUpdateClient()
     {
@@ -129,8 +91,7 @@ public class chatofpomelo : MonoBehaviour
         client.connectEvent -= OnConnectToConnector;
         client.closeEvent -= OnServerDisconnect;
 
-        if (loginBtn) { loginBtn.gameObject.SetActive(true); }
-        if (sendBtn) { sendBtn.interactable = false; }
+        if (disconnectConnector != null) disconnectConnector.Invoke();
 
     }
 
@@ -139,8 +100,7 @@ public class chatofpomelo : MonoBehaviour
         client.connectEvent -= OnConnectToGate;
         client.closeEvent -= OnGateServerDisconnect;
 
-        if (loginBtn) { loginBtn.gameObject.SetActive(true); }
-        if (sendBtn) { sendBtn.interactable = false; }
+        if (connectGateFailed != null) connectGateFailed.Invoke();
 
     }
 }

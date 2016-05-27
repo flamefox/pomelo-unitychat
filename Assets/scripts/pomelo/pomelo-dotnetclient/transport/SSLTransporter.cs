@@ -182,25 +182,55 @@ namespace Pomelo.DotNetClient
                 //    str += code.ToString();
                 //}
                 //Console.WriteLine("send:" + buffer.Length + " " + str.Length + "  " + str);
-                this.asyncSend = sslstream.BeginWrite(buffer, 0, buffer.Length, new AsyncCallback(sendCallback), stateObject);
+                try
+                {
 
-                this.onSending = true;
+                    this.asyncSend = sslstream.BeginWrite(buffer, 0, buffer.Length, new AsyncCallback(sendCallback), stateObject);
+
+                    this.onSending = true;
+                }
+                catch (Exception e)
+                {
+
+                    Debug.Log(e);
+                    if (this.onDisconnect != null)
+                        this.onDisconnect();
+                    this.close();
+                }
             }
         }
 
         private void sendCallback(IAsyncResult asyncSend)
         {
-            //UnityEngine.Debug.Log("sendCallback " + this.transportState);
-            if (this.transportState == TransportState.closed) return;
-            sslstream.EndWrite(asyncSend);
+            try
+            {
+                sslstream.EndWrite(asyncSend);
+            }
+            catch (Exception e)
+            {
+                Debug.Log(e);
+            }
+
             this.onSending = false;
+
         }
 
         public void receive()
         {
             //Console.WriteLine("receive state : {0}, {1}", this.transportState, socket.Available);
-            this.asyncReceive = sslstream.BeginRead(stateObject.buffer, 0, stateObject.buffer.Length, new AsyncCallback(endReceive), stateObject);
-            this.onReceiving = true;
+            try
+            {
+                this.asyncReceive = sslstream.BeginRead(stateObject.buffer, 0, stateObject.buffer.Length, new AsyncCallback(endReceive), stateObject);
+                this.onReceiving = true;
+            }
+            catch (Exception e)
+            {
+
+                Debug.Log(e);
+                if (this.onDisconnect != null)
+                    this.onDisconnect();
+                this.close();
+            }
         }
 
         public void close()
@@ -216,10 +246,14 @@ namespace Pomelo.DotNetClient
 
         private void endReceive(IAsyncResult asyncReceive)
         {
-            if (this.transportState == TransportState.closed)
-                return;
+
             StateObject state = (StateObject)asyncReceive.AsyncState;
             SslStream stream = this.sslstream;
+
+            if (this.transportState == TransportState.closed)
+            {
+                return;
+            }
 
             try
             {
@@ -230,20 +264,23 @@ namespace Pomelo.DotNetClient
                 if (length > 0)
                 {
                     processBytes(state.buffer, 0, length);
-                    Console.WriteLine(System.Text.Encoding.UTF8.GetString(state.buffer));
                     //Receive next message
+                    //Console.WriteLine(System.Text.Encoding.UTF8.GetString(state.buffer));
                     if (this.transportState != TransportState.closed) receive();
                 }
                 else
                 {
                     if (this.onDisconnect != null) this.onDisconnect();
+                    this.close();
                 }
 
             }
-            catch (System.Net.Sockets.SocketException)
+            catch (Exception e)
             {
+                Debug.Log(e);
                 if (this.onDisconnect != null)
                     this.onDisconnect();
+                this.close();
             }
         }
 
