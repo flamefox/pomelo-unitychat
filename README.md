@@ -8,6 +8,8 @@ a pomelo unity chat sample
 * support tls
 * use LitJson
 
+[pomelo's proto generator](https://github.com/flamefox/pomeloc)
+
 ## Test with
 
 unity 5.x
