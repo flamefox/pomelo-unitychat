@@ -13,14 +13,19 @@ namespace Pomelo.DotNetClient
 
         public const string Version = "0.3.0";
         public const string Type = "unity-socket";
-        
+        //private ProtocolNew protocolNew;
 
-        public HandShakeService(Protocol protocol)
+        //public HandShakeService(Protocol protocol)
+        //{
+        //    this.protocol = protocol;
+        //}
+
+        public HandShakeService(Protocol protocolNew)
         {
-            this.protocol = protocol;
+            this.protocol = protocolNew;
         }
 
-		public void request(JsonData user, Action<JsonData> callback){
+        public void request(JsonData user, Action<JsonData> callback){
 			byte[] body = Encoding.UTF8.GetBytes(JsonMapper.ToJson(buildMsg(user)));
 
             protocol.send(PackageType.PKG_HANDSHAKE, body);

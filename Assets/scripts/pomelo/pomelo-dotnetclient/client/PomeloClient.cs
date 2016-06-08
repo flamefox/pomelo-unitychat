@@ -1,20 +1,16 @@
-﻿using System.Collections;
-using LitJson;
-
+﻿using LitJson;
 using System;
-using System.Text;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Pomelo.DotNetClient
 {
-    /// <summary>
-    /// network state enum
-    /// </summary>
     public enum NetWorkState
     {
         [Description("initial state")]
@@ -32,88 +28,164 @@ namespace Pomelo.DotNetClient
         [Description("connect timeout")]
         TIMEOUT,
 
-        [Description("netwrok error")]
+        [Description("network error")]
         ERROR
     }
-
-    public class PomeloClient : IDisposable
+    public class PomeloClient
     {
-        /// <summary>
-        /// netwrok changed event
-        /// </summary>
-        public event Action<NetWorkState> NetWorkStateChangedEvent;
-
-
-        private NetWorkState netWorkState = NetWorkState.CLOSED;   //current network state
-
-        private EventManager eventManager;
-        private Socket socket;
+        private ITransporter transport;
         private Protocol protocol;
-        private bool disposed = false;
-        private uint reqId = 1;
+
+        EventManager eventManager;
 
         private List<Message> msgQueue = new List<Message>();
-        private List<Action>  callBackQueue = new List<Action>();
-
-        private Action<JsonData> handShakeCallBack = null;
-        private bool handShakeCallBackCanCall = false;
-        private JsonData handShakeCallBackData = new JsonData();
-
-        private ManualResetEvent timeoutEvent = new ManualResetEvent(false);
-        private int timeoutMSec = 8000;    //connect timeout count in millisecond
+       
         private ClientProtocolType client_type;
+
+        private event Action connectCB;
+        private event Action disconnectCB;
+        private event Action<JsonData> handShakeCallBack;
+
         private object guard = new object();
+        private JsonData handShakeCallBackData;
+
+        private bool handShakeCallBackCanCall;
+        private bool bDisconnCallBack;
+        private bool bConnectCallBack;
+
+        public PomeloClient(ClientProtocolType type = ClientProtocolType.NORMAL,
+            byte[] clientcert = null, string clientpwd = "", string cathumbprint = null)
+        {
+            this.client_type = type;
+
+            switch (this.client_type)
+            {
+                case ClientProtocolType.TLS:
+                    {
+                        transport = new TransporterSSL(clientcert, clientpwd, cathumbprint);
+                    }
+                    break;
+                case ClientProtocolType.NORMAL:
+                    {
+                        transport = new TransporterTCP();
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            this.protocol = new Protocol(transport, processMessage, OnProtocolClose);
+            this.transport.setOnStateChanged(OnTransportStateChange);
+
+            eventManager = new EventManager();
+        }
+
+        void OnTransportStateChange()
+        {
+            NetWorkState state = this.transport.NetworkState();
+            switch (state)
+            {
+                case NetWorkState.CLOSED:
+                    bDisconnCallBack = true;
+                    break;
+                case NetWorkState.CONNECTING:
+                    break;
+                case NetWorkState.CONNECTED:
+                    bConnectCallBack = true;
+                    break;
+                case NetWorkState.DISCONNECTED:
+                    bDisconnCallBack = true;
+                    break;
+                case NetWorkState.TIMEOUT:
+                    bDisconnCallBack = true;
+                    break;
+                case NetWorkState.ERROR:
+                    bDisconnCallBack = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        void OnProtocolClose()
+        {
+            if(this.IsConnected)
+            {
+                this.transport.close();
+            }            
+        }
+
+        void processMessage(Message msg)
+        {
+            lock (guard)
+            {
+                msgQueue.Add(msg);
+            }
+        }
+
+        public void poll()
+        {
+            lock (guard)
+            {
+                foreach (var msg in msgQueue)
+                {
+                    if (msg.type == MessageType.MSG_RESPONSE)
+                    {   
+                        eventManager.InvokeCallBack(msg.id, msg.data);
+                    }
+                    else if (msg.type == MessageType.MSG_PUSH)
+                    {
+                        eventManager.InvokeOnEvent(msg.route, msg.data);
+                    }
+                }
+                msgQueue.Clear();
+
+                if (this.bConnectCallBack == true)
+                {
+                    if (connectCB != null) connectCB();
+                    this.bConnectCallBack = false;
+
+                }
+
+                if (this.handShakeCallBackCanCall == true)
+                {
+                    this.handShakeCallBack(this.handShakeCallBackData);
+                    this.handShakeCallBackCanCall = false;
+                }
+
+                if (this.bDisconnCallBack == true)
+                {
+                    if (disconnectCB != null) disconnectCB();
+                    this.bDisconnCallBack = false;
+                }
+            }
+        }
+
+        public void close()
+        {
+            //cycle call
+            this.protocol.close();
+            this.transport.close();           
+        }
 
         public bool IsConnected
         {
-            get { return netWorkState == NetWorkState.CONNECTED;  }
+            get { return this.transport.NetworkState() == NetWorkState.CONNECTED; }
         }
 
-        public PomeloClient(ClientProtocolType type = ClientProtocolType.NORMAL)
+        public string HandShakeCache
         {
-            this.client_type = type;
+            get { return this.protocol.HandShakeCache; }
         }
 
-        public string GetHandShakeCache()
+        public bool Connect(
+            string host, int port, string handshake = "",
+            Action callback = null, Action disconnCallBack = null, int nTimeoutMS = 5000
+            )
         {
-            if(this.protocol != null)
-            {
-                return this.protocol.HandShakeCache;
-            }
-            return "";
-        }
-
-        private void InitHandShakeCache(string handshake)
-        {
-            if(handshake != null && handshake != "")
-            {
-                // TODO 做检查
-                //var md5 = new System.Security.Cryptography.MD5CryptoServiceProvider();
-                //JsonData handshake = JsonMapper.ToObject(this.HandShakeCache);
-                //byte[] handShakeCacheByte = Encoding.UTF8.GetBytes(this.HandShakeCache);
-                //byte[] hash = md5.ComputeHash(handShakeCacheByte);
-
-                //this.protocol.HandShakeVersion = Convert.ToBase64String(hash);
-                this.protocol.InitProtoCache(handshake);
-            }
-
-        }
-        Action disconnCallBack;
-        bool bDisconnCallBack = false;
-        /// <summary>
-        /// initialize pomelo client
-        /// </summary>
-        /// <param name="host">server name or server ip (www.xxx.com/127.0.0.1/::1/localhost etc.)</param>
-        /// <param name="port">server port</param>
-        /// <param name="callback">socket successfully connected callback(in network thread)</param>
-        public void initClient(string host, int port, string handshake = "", Action callback = null, Action disconnCallBack = null,
-            byte[] clientcert = null, string clientpwd = "", string cathumbprint = null)
-        {
-            this.disconnCallBack = disconnCallBack;
-
-            timeoutEvent.Reset();
-            eventManager = new EventManager();
-            NetWorkChanged(NetWorkState.CONNECTING);
+            this.protocol.HandShakeCache = handshake;
+            this.connectCB = callback;
+            this.disconnectCB = disconnCallBack;
 
             IPAddress ipAddress = new IPAddress(0);
             if (!IPAddress.TryParse(host, out ipAddress))
@@ -121,7 +193,7 @@ namespace Pomelo.DotNetClient
                 ipAddress = null;
             }
 
-            if(ipAddress == null)
+            if (ipAddress == null)
             {
                 try
                 {
@@ -137,113 +209,25 @@ namespace Pomelo.DotNetClient
                 }
                 catch (Exception e)
                 {
-                    NetWorkChanged(NetWorkState.ERROR);
                     Debug.Log(e);
-                    return;
+                    return false;
                 }
             }
-
 
             if (ipAddress == null)
             {
                 throw new Exception("can not parse host : " + host);
             }
 
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPEndPoint ie = new IPEndPoint(ipAddress, port);
-            
-            Debug.Log("InitHandShakeCache Finished");
-            socket.BeginConnect(ie, new AsyncCallback((result) =>
-            {
-                try
-                {
-                    this.socket.EndConnect(result);
-                    NetWorkChanged(NetWorkState.CONNECTED);
-                    if (this.client_type == ClientProtocolType.NORMAL)
-                    {
-                        this.protocol = new Protocol(this, this.socket, host);
-                    }
-                    else if (this.client_type == ClientProtocolType.TLS)
-                    {
-                        this.protocol = new Protocol(this, this.socket, host,
-                            client_type, clientcert, clientpwd, cathumbprint);
-                    }
-                    else
-                    {
-                        throw new Exception("unsupported client type : " + this.client_type);
-                    }
-                    this.InitHandShakeCache(handshake);
-                    
-                    lock (guard)
-                    {
-                    
-                        if (callback != null)
-                        {
-                            callBackQueue.Add(callback);
-                        }
-                    }
-                }
-                catch (SocketException e)
-                {
-                    if (netWorkState != NetWorkState.TIMEOUT)
-                    {
-                        NetWorkChanged(NetWorkState.ERROR);
-                    }
-                    //Dispose();
 
-                    lock(guard)
-                    {
-                        bDisconnCallBack = true;
-                    }
+            this.transport.Connect(ie, nTimeoutMS);
 
-                    Debug.Log(e);
-                }
-                finally
-                {
-                    timeoutEvent.Set();
-                }
-            }), this.socket);
+            return true;
 
-            if (timeoutEvent.WaitOne(timeoutMSec, false))
-            {
-                if (netWorkState != NetWorkState.CONNECTED && netWorkState != NetWorkState.ERROR)
-                {
-                    NetWorkChanged(NetWorkState.TIMEOUT);
-                    lock (guard)
-                    {
-                        bDisconnCallBack = true;
-                    }
-                    //Dispose();
-                }
-
-                if(netWorkState == NetWorkState.ERROR)
-                {
-                    lock (guard)
-                    {
-                        bDisconnCallBack = true;
-                    }
-
-                    //Dispose();
-                }
-            }
         }
 
-        /// <summary>
-        /// 网络状态变化
-        /// </summary>
-        /// <param name="state"></param>
-        private void NetWorkChanged(NetWorkState state)
-        {
-            netWorkState = state;
-
-            if (NetWorkStateChangedEvent != null)
-            {
-                NetWorkStateChangedEvent(state);
-            }
-        }
-
-
-        public bool connect(JsonData user, Action<JsonData> handshakeCallback)
+        public bool HandShake(JsonData user, Action<JsonData> handshakeCallback)
         {
             try
             {
@@ -252,6 +236,7 @@ namespace Pomelo.DotNetClient
                 {
                     lock (guard)
                     {
+                        this.handShakeCallBackData = new JsonData();
                         this.handShakeCallBackData = data;
                         this.handShakeCallBackCanCall = true;
                     }
@@ -260,16 +245,14 @@ namespace Pomelo.DotNetClient
             }
             catch (Exception e)
             {
-                Debug.Log(e.ToString());
+                Debug.Log(e);
                 return false;
             }
         }
 
-        
-
-        
-
         private JsonData emptyMsg = new JsonData();
+        private uint reqId = 1;
+
         public void request(string route, Action<JsonData> action)
         {
             this.request(route, emptyMsg, action);
@@ -291,148 +274,6 @@ namespace Pomelo.DotNetClient
         public void on(string eventName, Action<JsonData> action)
         {
             eventManager.AddOnEvent(eventName, action);
-        }
-
-        internal void processMessage(Message msg)
-        {
-            lock (guard)
-            {
-                msgQueue.Add(msg);
-            }
-            
-
-        }
-
-        public void poll()
-        {
-            lock (guard)
-            {
-                foreach (var msg in msgQueue)
-                {
-                    if (msg.type == MessageType.MSG_RESPONSE)
-                    {
-                        //msg.data["__route"] = msg.route;
-                        //msg.data["__type"] = "resp";
-
-                        eventManager.InvokeCallBack(msg.id, msg.data);
-                    }
-                    else if (msg.type == MessageType.MSG_PUSH)
-                    {
-                        //msg.data["__route"] = msg.route;
-                        //msg.data["__type"] = "push";
-                        eventManager.InvokeOnEvent(msg.route, msg.data);
-                    }
-                }
-                msgQueue.Clear();
-
-                foreach (var callback in callBackQueue)
-                {
-                    callback();
-                }
-                callBackQueue.Clear();
-
-                if(this.handShakeCallBackCanCall == true)
-                {
-                    this.handShakeCallBack(this.handShakeCallBackData);
-                    this.handShakeCallBackCanCall = false;
-                }
-
-                if(this.bDisconnCallBack == true)
-                {
-                    if(this.disconnCallBack != null)
-                    {
-                        this.disconnCallBack();
-                        
-
-                    }
-                    this.bDisconnCallBack = false;
-                    this.Dispose(true);
-                }
-            }
-
-
-        }
-
-        public void disconnect()
-        {
-            if (socket != null)
-            {
-                // socket.Disconnect(false);
-                try
-                {
-                    socket.Shutdown(SocketShutdown.Both);
-                }
-                catch (Exception)
-                {
-                }
-                socket.Close();
-                socket = null;
-
-            }
-           
-            NetWorkChanged(NetWorkState.DISCONNECTED);
-
-            lock(guard)
-            {
-                if(Thread.CurrentThread.ManagedThreadId == 1)
-                {
-                if (disconnCallBack != null)
-                {
-                        disconnCallBack();
-                        this.Dispose(true);
-                    }
-                }
-                else
-                {
-                    if (disconnCallBack != null)
-                    {
-                        bDisconnCallBack = true;
-                    }
-                }
-            }
-
-            //Dispose();
-
-        }
-
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        // The bulk of the clean-up code
-        protected virtual void Dispose(bool disposing)
-        {
-            if (this.disposed)
-                return;
-
-            if (disposing)
-            {
-                // free managed resources
-                if (this.protocol != null)
-                {
-                    this.protocol.close();
-                }
-
-                if (this.eventManager != null)
-                {
-                    this.eventManager.Dispose();
-                }
-
-                try
-                {
-                    this.socket.Shutdown(SocketShutdown.Both);
-                    this.socket.Close();
-                    this.socket = null;
-                }
-                catch (Exception)
-                {
-                    //todo : 有待确定这里是否会出现异常，这里是参考之前官方github上pull request。emptyMsg
-                }
-
-                this.disposed = true;
-            }
         }
     }
 }

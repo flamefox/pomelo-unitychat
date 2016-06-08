@@ -20,9 +20,9 @@ public class pomeloBehaviour : MonoBehaviour
     [HideInInspector]
     public PomeloClient pc;
 
-    public Action connectEvent;
-    public Action closeEvent;
-    public Action updateClientEvent;
+    public event Action connectEvent;
+    public event Action closeEvent;
+    public event Action updateClientEvent;
 
     // Use this for initialization
     void Start()
@@ -33,7 +33,7 @@ public class pomeloBehaviour : MonoBehaviour
     [ExecuteInEditMode]
     void OnDestroy()
     {
-        CloseClient();
+        CloseClient(); 
     }
 
     // Update is called once per frame
@@ -49,7 +49,12 @@ public class pomeloBehaviour : MonoBehaviour
     {
         if (pc != null)
         {
-            pc.disconnect();
+            pc.close();
+            //pc.poll();
+            if (this.closeEvent != null)
+            {
+                this.closeEvent();
+            }
             pc = null;
 
             this.UpdateClient();
@@ -60,7 +65,7 @@ public class pomeloBehaviour : MonoBehaviour
     {
         if(pc != null)
         {
-            return pc.GetHandShakeCache();
+            return pc.HandShakeCache;
         }
         return "";
     }
@@ -79,23 +84,21 @@ public class pomeloBehaviour : MonoBehaviour
             }
         }
 
-        //TODO should not disconnect at some time
-        this.CloseClient();
-        pc = new PomeloClient(eProtoType);
-        pc.initClient(host, port, HandShakeCache, delegate ()
+        //this.CloseClient();
+        pc = new PomeloClient(eProtoType, clientcert, "", cathumbprint);
+        pc.Connect(host, port, HandShakeCache, delegate ()
         {
             if (pc.IsConnected)
             {
                 this.UpdateClient();
-                pc.connect(null, delegate (JsonData data)
+                pc.HandShake(null, delegate (JsonData data)
                 {
                     if (this.connectEvent != null)
                     {
                         this.connectEvent();
                     }
                 });
-            }
-           
+            }           
         },
         delegate ()
         {
@@ -104,7 +107,7 @@ public class pomeloBehaviour : MonoBehaviour
                 this.closeEvent();
             }
 
-        }, clientcert, "", cathumbprint
+        }
         );
 
         return true;

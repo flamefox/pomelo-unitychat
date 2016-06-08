@@ -8,18 +8,18 @@ namespace Pomelo.DotNetClient
 {
     public class Protocol
     {
+        private ITransporter transporter;
         private MessageProtocol messageProtocol;
         private ProtocolState state;
-        private ITransporter transporter;
+ 
         private HandShakeService handshake;
         private HeartBeatService heartBeatService = null;
-        private PomeloClient pc;
+
+        private event Action<Message> messageProcessor;
+        private event Action onProtocolClose;
+
+
         public string HandShakeCache{ get; set; }
-
-
-        public PomeloClient getPomeloClient(){
-            return this.pc;
-        }
 
         public string getDictVersion()
         {
@@ -41,50 +41,35 @@ namespace Pomelo.DotNetClient
             return "";
         }
 
-        public string HandShakeVersion { get; set; }
 
 
-        public Protocol(PomeloClient pc, System.Net.Sockets.Socket socket, string target_host,
-            ClientProtocolType type = ClientProtocolType.NORMAL,
-            byte[] clientcert = null, string clientpwd = "", string cathumbprint = null){
-            if(type == ClientProtocolType.NORMAL)
-            {
-                this.pc = pc;
-                this.transporter = new Transporter(socket, this.processMessage);
-                this.transporter.setOnConnect(onDisconnect);
+        public Protocol(ITransporter transproter, Action<Message> messageProcessor, Action onProtoClose)
+        {
 
-                this.handshake = new HandShakeService(this);
+            this.transporter = transproter;
+            this.transporter.onReceive(this.processMessage);
+            this.onProtocolClose += onProtoClose;
+            this.messageProcessor += messageProcessor;
 
-                this.state = ProtocolState.start;
-            }
-            else
-            {
-                this.pc = pc;
-                this.transporter = new SSLTransporter(new NetworkStream(socket), 
-                    this.processMessage, 
-                    target_host, clientcert, clientpwd, cathumbprint);
-                this.transporter.setOnConnect(onDisconnect);
-
-                this.handshake = new HandShakeService(this);
-
-                this.state = ProtocolState.start;
-            }
+            this.handshake = new HandShakeService(this);
+            this.state = ProtocolState.ready;
+          
         }
 
-		internal void start(JsonData user, Action<JsonData> callback){
-            this.transporter.start();
+		public void start(JsonData user, Action<JsonData> callback){
+            this.transporter.receive();
             this.handshake.request(user, callback);
 
             this.state = ProtocolState.handshaking;
         }
 
         //Send notify, do not need id
-		internal void send(string route, JsonData msg){
+		public void send(string route, JsonData msg){
             send(route, 0, msg);
         }
 
         //Send request, user request id 
-		internal void send(string route, uint id, JsonData msg){
+        public void send(string route, uint id, JsonData msg){
             if (this.state != ProtocolState.working) return;
 
             byte[] body = messageProtocol.encode(route, id, msg);
@@ -92,13 +77,13 @@ namespace Pomelo.DotNetClient
             send(PackageType.PKG_DATA, body);
         }
 
-		internal void send(PackageType type){
+        public void send(PackageType type){
             if (this.state == ProtocolState.closed) return;
             transporter.send(PackageProtocol.encode(type));
         }
 
         //Send system message, these message do not use messageProtocol
-		internal void send(PackageType type, JsonData msg){
+        public void send(PackageType type, JsonData msg){
             //This method only used to send system package
             if (type == PackageType.PKG_DATA) return;
 
@@ -108,7 +93,7 @@ namespace Pomelo.DotNetClient
         }
 
         //Send message use the transporter
-		internal void send(PackageType type, byte[] body){
+        public void send(PackageType type, byte[] body){
             if (this.state == ProtocolState.closed) return;
 
             byte[] pkg = PackageProtocol.encode(type, body);
@@ -117,7 +102,7 @@ namespace Pomelo.DotNetClient
         }
 
         //Invoke by Transporter, process the message
-		internal void processMessage(byte[] bytes){
+		void processMessage(byte[] bytes){
             Package pkg = PackageProtocol.decode(bytes);
 
             //Ignore all the message except handshading at handshake stage
@@ -130,12 +115,18 @@ namespace Pomelo.DotNetClient
 
                 this.state = ProtocolState.working;
 
-			}else if (pkg.type == PackageType.PKG_HEARTBEAT && this.state == ProtocolState.working){
+			}
+            else if (pkg.type == PackageType.PKG_HEARTBEAT && this.state == ProtocolState.working){
                 this.heartBeatService.resetTimeout();
-			}else if (pkg.type == PackageType.PKG_DATA && this.state == ProtocolState.working) {
+			}
+            else if (pkg.type == PackageType.PKG_DATA && this.state == ProtocolState.working) {
                 this.heartBeatService.resetTimeout();
-                pc.processMessage(messageProtocol.decode(pkg.body));
-			}else if (pkg.type == PackageType.PKG_KICK) {
+                if(messageProcessor != null)
+                {
+                    messageProcessor(messageProtocol.decode(pkg.body));
+                }
+			}
+            else if (pkg.type == PackageType.PKG_KICK) {
                 this.close();
             }
         }
@@ -148,9 +139,9 @@ namespace Pomelo.DotNetClient
 
         private void InitProtoCache(JsonData sys)
         {
-            JsonData dict = new JsonData();
-            JsonData routeToCode = new JsonData();
-            JsonData codeToRoute = new JsonData();
+            JsonData dict = new JsonData(); 
+            //JsonData routeToCode = new JsonData();
+            //JsonData codeToRoute = new JsonData();
             if (sys.ContainsKey("dict")) dict = (JsonData)sys["dict"];
             //if (sys.ContainsKey("routeToCode")) routeToCode = (JsonData)sys["routeToCode"];
             //if (sys.ContainsKey("codeToRoute")) codeToRoute = (JsonData)sys["codeToRoute"];
@@ -233,7 +224,7 @@ namespace Pomelo.DotNetClient
 			if(!msg.ContainsKey("code") || !msg.ContainsKey("sys") || Convert.ToInt32(msg["code"].ToString()) != 200){
                 throw new Exception("Handshake error! Please check your handshake config.");
             }
-            Debug.Log(msg.ToJson());
+            //Debug.Log(msg.ToJson());
              
             //Set compress data
 			JsonData sys = (JsonData)msg["sys"];
@@ -261,17 +252,16 @@ namespace Pomelo.DotNetClient
             handshake.invokeCallback(user);
         }
 
-        //The socket disconnect
-		private void onDisconnect(){
-            this.pc.disconnect();
-        }
-
-		internal void close(){
-            transporter.close();
+		public void close(){          
 
             if (heartBeatService != null) heartBeatService.stop();
 
             this.state = ProtocolState.closed;
+
+            if(onProtocolClose != null)
+            {
+                onProtocolClose();
+            }
         }
     }
 }

@@ -17,7 +17,7 @@ namespace Pomelo.DotNetClient
             this.protocol = protocol;
         }
 
-		internal void resetTimeout(){
+		public void resetTimeout(){
             this.timeout = 0;
             lastTime = DateTime.Now;
         }
@@ -29,7 +29,8 @@ namespace Pomelo.DotNetClient
             //check timeout
             if (timeout > interval * 2)
             {
-                protocol.getPomeloClient().disconnect();
+                //protocol.getPomeloClient().disconnect();
+                protocol.close();
                 //stop();
                 return;
             }

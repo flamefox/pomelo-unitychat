@@ -52,6 +52,8 @@ public class chatofpomelo : MonoBehaviour
             connectToConnector.Invoke();
         }
 
+
+        Debug.Log("Connector Connected");
       
     }
     public void OnConnectToGate()
@@ -78,6 +80,7 @@ public class chatofpomelo : MonoBehaviour
 
             //TODO other event
         });
+        Debug.Log("Gate Connected");
     }
 
 
