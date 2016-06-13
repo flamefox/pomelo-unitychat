@@ -54,7 +54,7 @@ namespace Pomelo.DotNetClient
                 }
             }
         }
-        public void close()
+        public virtual void close()
         {
             this.transportState = TransportState.closed;
 
@@ -72,7 +72,7 @@ namespace Pomelo.DotNetClient
             NetWorkChanged(NetWorkState.CLOSED);
         }
 
-        private void CheckTimeOutEvent()
+        protected void CheckTimeOutEvent()
         {
             timer.Stop();
             timer.Enabled = false;
@@ -90,7 +90,7 @@ namespace Pomelo.DotNetClient
             }
         }
 
-        public void Connect(IPEndPoint ep, int nTimeout)
+        public virtual void Connect(IPEndPoint ep, int nTimeout)
         {
             Debug.Log("Transport connect " + ep.Address.ToString() + " with timeout:"+nTimeout);
             if (nTimeout != 0)
@@ -103,7 +103,11 @@ namespace Pomelo.DotNetClient
             timer.Elapsed += new ElapsedEventHandler(ConnectTimeout);
             timer.Enabled = true;
 
-            asyncConnect = socket.BeginConnect(ep, new AsyncCallback((result) =>
+            asyncConnect = socket.BeginConnect(ep, new AsyncCallback(OnConnected), this.socket);
+
+        }
+
+        virtual protected void OnConnected(IAsyncResult result)
             {
                 try
                 {
@@ -123,8 +127,6 @@ namespace Pomelo.DotNetClient
                 {
                     this.CheckTimeOutEvent();
                 }
-            }), this.socket);
-
         }
 
         public void ConnectTimeout(object source, ElapsedEventArgs e)
@@ -213,7 +215,7 @@ namespace Pomelo.DotNetClient
                 readBody(bytes, offset, limit);
             }
         }
-        protected void endReceive(IAsyncResult asyncReceive)
+        protected virtual void endReceive(IAsyncResult asyncReceive)
         {
             StateObject state = (StateObject)asyncReceive.AsyncState;
             Socket socket = this.socket;
@@ -241,7 +243,7 @@ namespace Pomelo.DotNetClient
                 this.close();
             }
         }
-        public void receive()
+        public virtual void receive()
         {
             try
             {
@@ -253,7 +255,7 @@ namespace Pomelo.DotNetClient
                 this.close();
             }
         }
-        public void send(byte[] buffer)
+        public virtual void send(byte[] buffer)
         {
             if (this.transportState != TransportState.closed)
             {
@@ -268,7 +270,7 @@ namespace Pomelo.DotNetClient
                 }
             }
         }
-        protected void sendCallback(IAsyncResult asyncSend)
+        protected virtual void sendCallback(IAsyncResult asyncSend)
         {
             try
             {

@@ -76,13 +76,13 @@ public class pomeloBehaviour : MonoBehaviour
         string HandShakeCache = "",
         byte[] clientcert = null, string clientpwd = "", string cathumbprint = null)
     {
-        if (eProtoType == ClientProtocolType.TLS)
-        {
-            if (clientcert == null || cathumbprint == null)
-            {
-                return false;
-            }
-        }
+        //if (eProtoType == ClientProtocolType.TLS)
+        //{
+        //    if (clientcert == null || cathumbprint == null)
+        //    {
+        //        return false;
+        //    }
+        //}
 
         //this.CloseClient();
         pc = new PomeloClient(eProtoType, clientcert, "", cathumbprint);

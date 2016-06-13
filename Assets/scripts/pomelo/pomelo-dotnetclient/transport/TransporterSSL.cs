@@ -20,22 +20,31 @@ namespace Pomelo.DotNetClient
         private static List<string> target_hosts = new List<string>();
         private string target_host;
 
+        private bool tryAuthed = false;
+        private bool authed = false;
+        private NetworkStream tcpStream;
+
         public static void clearCAThumbprintList()
         {
             ca_thumbprints.Clear();
         }
 
-        public static bool ValidateServerCertificate(
+        public bool ValidateServerCertificate(
         object sender,
         X509Certificate certificate,
         X509Chain chain,
         SslPolicyErrors sslPolicyErrors)
         {
             if (sslPolicyErrors == SslPolicyErrors.None)
+            {
+                authed = true;
                 return true;
+            }
+                
             if (chain.ChainElements.Count < 1)
             {
                 Debug.LogError("certificate failed. empty chain!");
+                authed = false;
                 return false;
             }
 
@@ -53,6 +62,7 @@ namespace Pomelo.DotNetClient
             if (!cert_is_ok)
             {
                 Debug.LogError("certificate failed. unknown cert printer: " + root.Thumbprint);
+                authed = false;
                 return false;
             }
 
@@ -69,8 +79,10 @@ namespace Pomelo.DotNetClient
             if (!cert_is_ok)
             {
                 Debug.LogError("certificate failed. mismatch host: " + root.Subject);
+                authed = false;
                 return false;
             }
+            authed = true;
             return true;
             //Console.WriteLine("{0}", root.Thumbprint);
             //// Do not allow this client to communicate with unauthenticated servers.
@@ -86,23 +98,53 @@ namespace Pomelo.DotNetClient
         }
         public TransporterSSL(byte[] clientcert = null, string clientpwd = "", string cathumbprint = null)
         {
-            this.sslstream = new SslStream(
-                new NetworkStream(socket),
-                false,
-                new RemoteCertificateValidationCallback(ValidateServerCertificate),
-                null
-                );
+            this.sslstream = null;
+           
            
             ca_thumbprints.Add(cathumbprint);
             this.clientcert = clientcert;
             this.clientpwd = clientpwd;
         }
 
-        public new void Connect(IPEndPoint ep, int nTimeout = 8000)
+        public override void Connect(IPEndPoint ep, int nTimeout = 8000)
         {
             target_hosts.Add(ep.Address.ToString());
             this.target_host = ep.Address.ToString();
             base.Connect(ep, nTimeout);
+        }
+
+        protected override void OnConnected(IAsyncResult result)
+        {
+            try
+            {
+                this.socket.EndConnect(result);
+                tcpStream = new NetworkStream(socket);
+
+               
+            this.sslstream = new SslStream(
+                  tcpStream,
+                false,
+                new RemoteCertificateValidationCallback(ValidateServerCertificate),
+                null
+                );
+           
+
+                NetWorkChanged(NetWorkState.CONNECTED);
+            }
+            catch (SocketException e)
+            {
+                if (netWorkState != NetWorkState.TIMEOUT)
+                {
+                    NetWorkChanged(NetWorkState.ERROR);
+        }
+
+                Debug.Log(e);
+            }
+            finally
+        {
+                this.CheckTimeOutEvent();
+            }
+
         }
 
         bool authorized()
@@ -111,6 +153,9 @@ namespace Pomelo.DotNetClient
             {
                 return false;
             }
+
+            if (tryAuthed == false)
+            {
             try
             {
                 if (this.clientcert != null)
@@ -125,7 +170,7 @@ namespace Pomelo.DotNetClient
                     sslstream.AuthenticateAsClient(this.target_host);
                 }
 
-                return true;
+                   // return true;
             }
             catch (AuthenticationException e)
             {
@@ -138,10 +183,18 @@ namespace Pomelo.DotNetClient
                 sslstream.Close();
                 this.close();
             }
-            return false;
+                finally
+                {
+                    tryAuthed = true;
+                }
+            }
+
+
+
+            return authed;
         }
 
-        public new void receive()
+        public override void receive()
         {
             if (!this.authorized())
             {
@@ -166,7 +219,36 @@ namespace Pomelo.DotNetClient
             }
         }
 
-        public new void send(byte[] buffer)
+        protected override void endReceive(IAsyncResult asyncReceive)
+        {
+            StateObject state = (StateObject)asyncReceive.AsyncState;
+           
+
+            try
+            {
+                int length = sslstream.EndRead(asyncReceive);
+                if (length > 0)
+                {
+                    processBytes(state.buffer, 0, length);
+
+                    //Receive next message
+                    if (this.transportState != TransportState.closed) receive();
+                }
+                else
+                {
+                    this.close();
+                }
+
+            }
+            catch (SocketException e)
+            {
+                Debug.Log(e);
+
+                this.close();
+            }
+        }
+
+        public override void send(byte[] buffer)
         {
             if (this.transportState != TransportState.closed)
             {
@@ -182,7 +264,7 @@ namespace Pomelo.DotNetClient
             }
         }
 
-        private new void sendCallback(IAsyncResult asyncSend)
+        protected override void sendCallback(IAsyncResult asyncSend)
         {
             try
             {
@@ -192,6 +274,23 @@ namespace Pomelo.DotNetClient
             {
                 Debug.Log(e);
             }
+        }
+
+        public override void close()
+        {
+            if (this.sslstream != null)
+            {
+                this.sslstream.Close();
+                this.sslstream = null;
+            }
+
+            if(this.tcpStream != null)
+            {
+                this.tcpStream.Close();
+                this.tcpStream = null;
+            }
+
+            base.close();
         }
 
     }
