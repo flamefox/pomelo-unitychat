@@ -10,6 +10,12 @@ a pomelo unity chat sample
 
 [pomelo's proto generator](https://github.com/flamefox/pomeloc)
 
+## TestServer
+
+Use the sample server at this link [https://github.com/NetEase/chatofpomelo-websocket].
+switch branch to tutorial-admin-module and change the version of pomelo at packages.json.
+
+
 ## TLS/SSL EASY USE
 
 client:
@@ -21,22 +27,21 @@ client.ConnectServer(host, port, Pomelo.DotNetClient.ClientProtocolType.TLS);
 server: 
 ```javascript
 //app.js
-	app.set('connectorConfig',
-		{
-			connector: pomelo.connectors.hybridconnector,
-			useDict: true,
+app.set('connectorConfig',{
+	connector: pomelo.connectors.hybridconnector,
+	useDict: true,
 
-			// enable useProto
-			useProtobuf: true
+	// enable useProto
+	useProtobuf: true
 
-			,ssl: {
-				ca: [fs.readFileSync('./keys/out/CA/ca.crt')],
-				pfx: fs.readFileSync('./keys/out/newcert/server.pfx'),
-				// This is necessary only if using the client certificate authentication.
-				//requestCert: true,
-				//rejectUnauthorized: true
-			}
-		});
+	,ssl: {
+		ca: [fs.readFileSync('./keys/out/CA/ca.crt')],
+		pfx: fs.readFileSync('./keys/out/newcert/server.pfx'),
+		// This is necessary only if using the client certificate authentication.
+		//requestCert: true,
+		//rejectUnauthorized: true
+	}
+});
 ```
 
 if you want change the verify of the server, change the code of TransporterSSL.ValidateServerCertificate
@@ -55,4 +60,4 @@ then run the server and client
 
 ## known issue
 
-sometime unity socket BeginConnect will not return(maybe Unity Editor's bug[TCP Socket Async BeginSend never happens](http://answers.unity3d.com/questions/892371/tcp-socket-async-beginsend-never-happens.html)), re-compile script or restart will fix this
+sometime unity socket BeginConnect will not return(maybe Unity Editor's bug[[TCP Socket Async BeginSend never happens](http://answers.unity3d.com/questions/892371/tcp-socket-async-beginsend-never-happens.html)]), re-compile script or restart will fix this
