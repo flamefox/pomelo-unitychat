@@ -74,12 +74,22 @@ public class logicclient : MonoBehaviour
 
         ServerEvent.onAdd(delegate (ServerEvent.onAdd_event msg)
         {
-
+            string strMsg = string.Format("{0} Joined.", msg.user);
+            if (text)
+            {
+                text.text = text.text.Insert(text.text.Length, strMsg);
+                text.text = text.text.Insert(text.text.Length, "\n");
+            }
         });
 
         ServerEvent.onLeave(delegate (ServerEvent.onLeave_event msg)
         {
-
+            string strMsg = string.Format("{0} Leaved.", msg.user);
+            if (text)
+            {
+                text.text = text.text.Insert(text.text.Length, strMsg);
+                text.text = text.text.Insert(text.text.Length, "\n");
+            }
         });
 
 
