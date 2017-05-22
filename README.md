@@ -8,12 +8,17 @@ a pomelo unity chat sample
 * support tls
 * use LitJson
 
-[pomelo's proto generator](https://github.com/flamefox/pomeloc)
+you can use [pomelo's proto generator](https://github.com/flamefox/pomeloc) to generate the stub msg
 
 ## TestServer
 
 Use the sample server at this link [https://github.com/NetEase/chatofpomelo-websocket].
-switch branch to tutorial-admin-module and change the version of pomelo at packages.json.
+or use submodule just 
+```
+cd game-server
+npm install -d
+node app
+```
 
 
 ## TLS/SSL EASY USE
@@ -44,20 +49,22 @@ app.set('connectorConfig',{
 });
 ```
 
-if you want change the verify of the server, change the code of TransporterSSL.ValidateServerCertificate
+if you want change the verify of the server, change the code of 
+```
+TransporterSSL.ValidateServerCertificate
+```
 
 
 ## Test with
 
-unity 5.x
-pomelo 1.2.2
+unity 5.6.0
+pomelo 2.2.x
 Windows
 
 ## install
 
-replace the proto define of chatofpomelo with chatofpomelo-proto-patch
-then run the server and client
+just run the newest chatofpomelo-websocket game-server, and open the project with untiy3d and play it.
 
 ## known issue
 
-sometime unity socket BeginConnect will not return(maybe Unity Editor's bug[[TCP Socket Async BeginSend never happens](http://answers.unity3d.com/questions/892371/tcp-socket-async-beginsend-never-happens.html)]), re-compile script or restart will fix this
+~~sometime unity socket BeginConnect will not return(maybe Unity Editor's bug[[TCP Socket Async BeginSend never happens](http://answers.unity3d.com/questions/892371/tcp-socket-async-beginsend-never-happens.html)]), re-compile script or restart will fix this~~
